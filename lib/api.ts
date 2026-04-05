@@ -158,6 +158,58 @@ const upsertSession = async (body: Record<string, unknown>) => {
   return res
 }
 
+/** Group attendance: returns students x dates matrix with status for each cell. */
+export type AttendanceStatus = "present" | "absent" | "late" | "excused" | "unknown"
+export type ClassAttendanceCell = {
+  date: string
+  status: AttendanceStatus
+}
+export type ClassAttendanceRow = {
+  studentId: number
+  fullName: string
+  cells: ClassAttendanceCell[]
+}
+
+// Backend response shape for GET /admin/classes/:id/attendance
+export type ClassAttendanceApiResponse = {
+  class: { id: number; name: string }
+  sessions: { id: number; starts_at: string; ends_at: string; status: string }[]
+  students: { id: number; fullName: string }[]
+  records: {
+    student: { id: number; fullName: string }
+    summary: {
+      totalSessions: number
+      attendedCount: number
+      lateCount: number
+      absentCount: number
+      attendancePercentage: number
+    }
+    statuses: { sessionId: number; status: AttendanceStatus; note?: string | null; markedAt?: string }[]
+  }[]
+}
+/**
+ * Fetch attendance for a class and month. If backend doesn’t support group endpoint,
+ * prefer getStudentAttendance for each student and aggregate on client.
+ */
+const getClassAttendance = async (params: { classId: number | string; month: string }) => {
+  const { classId, month } = params
+  // Try a conventional admin endpoint; change if needed.
+  const res = await axios.get<ClassAttendanceApiResponse>(`${apiBaseUrl}/admin/classes/${classId}/attendance`, {
+    params: { month },
+  })
+  return res
+}
+
+/** Fetch single student's attendance for a given month */
+const getStudentAttendance = async (params: { studentId: number | string; month: string }) => {
+  const { studentId, month } = params
+  // Conventional admin endpoint; adjust if your backend differs.
+  const res = await axios.get(`${apiBaseUrl}/admin/students/${studentId}/attendance`, {
+    params: { month },
+  })
+  return res
+}
+
 export type CourseSpecialization = {
   id: number
   courseId: number
@@ -213,6 +265,8 @@ const service = {
   createSpecialization,
   updateSpecialization,
   deleteSpecialization,
+  getClassAttendance,
+  getStudentAttendance,
 }
 
 export default service

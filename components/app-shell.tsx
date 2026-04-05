@@ -15,6 +15,7 @@ import {
   Bell,
   BookOpen,
   CircleFadingArrowUpIcon,
+  CalendarCheck,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -37,6 +38,7 @@ const navItems = [
   { id: "specializations", label: "İxtisaslar", icon: Tags },
   { id: "teachers", label: "Müəllimlər", icon: UserCheck },
   { id: "classes", label: "Siniflər", icon: BookOpen },
+  { id: "attendance", label: "Davranış", icon: CalendarCheck },
   { id: "students", label: "Tələbələr", icon: Users },
   { id: "billing", label: "Faktura", icon: Receipt },
 ]
