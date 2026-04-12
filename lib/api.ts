@@ -36,7 +36,7 @@ const upload = async (data: FormData) => {
   const res = await axios.post(`${apiBaseUrl}/upload`, data)
   return res
 }
-const login = async (params: { emailOrPhone: string; password: string }) => {
+const login = async (params: { email: string; password: string }) => {
   const res = await axios.post(`${apiBaseUrl}/admin/login`, params)
   return res
 }
@@ -113,11 +113,42 @@ const deleteStudent = async (id: number | string) => {
   const res = await axios.delete(`${apiBaseUrl}/admin/students/${id}`)
   return res
 }
+
+/** Kursdan çıxarma + səbəb qeydi (audit cədvəli). */
+const removeStudentFromCourse = async (params: { studentUserId: number; note: string }) => {
+  const res = await axios.post(`${apiBaseUrl}/admin/students/remove-from-course`, params)
+  return res
+}
+
+export type StudentCourseRemovalRow = {
+  id: number
+  courseId: number
+  courseName: string | null
+  studentUserId: number | null
+  studentFullNameSnapshot: string | null
+  note: string
+  removedByAdminId: number
+  removedByAdminName: string | null
+  /** Kursdan çıxma vaxtı */
+  removedAt: string
+  createdAt?: string
+}
+
+const getStudentCourseRemovals = async () => {
+  const res = await axios.get<StudentCourseRemovalRow[]>(`${apiBaseUrl}/admin/students/course-removals`)
+  return res
+}
 const enrollStudentToClasses = async (params: {
   studentUserId: number
   classes: { classId: number; monthlyFee: number; startMonth: string }[]
 }) => {
   const res = await axios.post(`${apiBaseUrl}/admin/students/enroll`, params)
+  return res
+}
+
+/** Mövcud sinif qeydiyyatlarını ləğv edir (sinifdən çıxarır). */
+const unenrollStudentFromClasses = async (params: { studentUserId: number; classIds: number[] }) => {
+  const res = await axios.post(`${apiBaseUrl}/admin/students/unenroll`, params)
   return res
 }
 const getStudentInvoices = async (studentId: number | string) => {
@@ -250,7 +281,10 @@ const service = {
   getStudents,
   upsertStudent,
   deleteStudent,
+  removeStudentFromCourse,
+  getStudentCourseRemovals,
   enrollStudentToClasses,
+  unenrollStudentFromClasses,
   getStudentInvoices,
   getDashboardSummary,
   generateStudentInvoices,

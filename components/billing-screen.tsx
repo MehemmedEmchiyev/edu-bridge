@@ -134,27 +134,27 @@ export function BillingScreen() {
       return
     }
     let cancelled = false
-    ;(async () => {
-      setInvoicesLoading(true)
-      try {
-        const res = await service.getStudentInvoices(selectedStudentId)
-        const raw = (res.data || []) as Record<string, unknown>[]
-        if (!cancelled) setInvoices(raw.map((r) => normalizeInvoiceFromApi(r)))
-      } catch (e: unknown) {
-        if (!cancelled) {
-          setInvoices([])
-          const msg =
-            e && typeof e === "object" && "response" in e
-              ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
-              : undefined
-          toast.error("Fakturalar yüklənmədi", {
-            description: typeof msg === "string" ? msg : "Giriş və ya tələbə qeydiyyatını yoxlayın.",
-          })
+      ; (async () => {
+        setInvoicesLoading(true)
+        try {
+          const res = await service.getStudentInvoices(selectedStudentId)
+          const raw = (res.data || []) as Record<string, unknown>[]
+          if (!cancelled) setInvoices(raw.map((r) => normalizeInvoiceFromApi(r)))
+        } catch (e: unknown) {
+          if (!cancelled) {
+            setInvoices([])
+            const msg =
+              e && typeof e === "object" && "response" in e
+                ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+                : undefined
+            toast.error("Fakturalar yüklənmədi", {
+              description: typeof msg === "string" ? msg : "Giriş və ya tələbə qeydiyyatını yoxlayın.",
+            })
+          }
+        } finally {
+          if (!cancelled) setInvoicesLoading(false)
         }
-      } finally {
-        if (!cancelled) setInvoicesLoading(false)
-      }
-    })()
+      })()
     return () => {
       cancelled = true
     }
@@ -338,7 +338,7 @@ export function BillingScreen() {
                       <span className="font-medium text-foreground">{studentDisplayName}</span> üçün{" "}
                     </>
                   ) : null}
-                  bu sinif üzrə bütün ödənilməmiş fakturalar ödənilmiş (PAID) kimi qeyd olunacaq.
+                  bu sinif üzrə bütün ödənilməmiş fakturalar ödənilmiş  kimi qeyd olunacaq.
                 </p>
                 {!canFullPay && (
                   <p className="text-destructive">Bu sinif üçün ödənilməmiş faktura yoxdur — əməliyyat tətbiq olunmayacaq.</p>

@@ -29,7 +29,7 @@ export function LoginScreen() {
   const handleSubmit = async (values: any) => {
     setLoading(true)
     try {
-      const res = await service.login({ emailOrPhone: values.email, password: values.password })
+      const res = await service.login({ email: values.email, password: values.password })
       localStorage.setItem("token", res.data.access_token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
       router.push("/dashboard")

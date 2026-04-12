@@ -93,7 +93,7 @@ export function BillingInvoiceTable({
           <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4">
             <h3 className="text-lg font-medium text-foreground">Faktura siyahısı boşdur</h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-md text-balance">{emptyHint}</p>
-            
+
           </CardContent>
         </Card>
       </div>
@@ -154,13 +154,13 @@ export function BillingInvoiceTable({
                   {bulkInvoiceStatusPending || statusUpdatingInvoiceId === inv.id ? (
                     <Skeleton className="h-8 w-36 rounded-md" aria-hidden />
                   ) : (
-                    <Select value={inv.status} onValueChange={(val) => onStatusChange(inv.id, val)}>
+                    <Select disabled={inv.status == "paid" && true} value={inv.status} onValueChange={(val) => onStatusChange(inv.id, val)}>
                       <SelectTrigger className="w-36 h-8 text-xs">
-                        <SelectValue>{statusBadge(inv.status)}</SelectValue>
+                        <SelectValue >{statusBadge(inv.status)}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="paid">Ödənilmiş</SelectItem>
-                        <SelectItem value="unpaid">Ödənilməmiş</SelectItem>
+                        {/* <SelectItem value="unpaid">Ödənilməmiş</SelectItem> */}
                         <SelectItem value="overdue">Gecikmiş</SelectItem>
                         <SelectItem value="cancelled">Ləğv</SelectItem>
                       </SelectContent>

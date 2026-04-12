@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { LayoutGrid, List, Loader2, Users } from "lucide-react"
@@ -40,6 +42,7 @@ export function StudentsScreen() {
   const [enrollOpen, setEnrollOpen] = useState(false)
   const [enrollStudentId, setEnrollStudentId] = useState<number | null>(null)
   const [enrollClassIds, setEnrollClassIds] = useState<number[]>([])
+  const [enrollRemoveClassIds, setEnrollRemoveClassIds] = useState<number[]>([])
   const [enrollMonthlyFee, setEnrollMonthlyFee] = useState("150")
   const [enrollStartMonth, setEnrollStartMonth] = useState(() => defaultStartMonth())
   const [enrollSubmitting, setEnrollSubmitting] = useState(false)
@@ -57,6 +60,7 @@ export function StudentsScreen() {
   const [view, setView] = useState<"grid" | "list">("grid")
 
   const [studentToRemove, setStudentToRemove] = useState<number | null>(null)
+  const [removeStudentNote, setRemoveStudentNote] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const openCreate = () => {
@@ -165,20 +169,28 @@ export function StudentsScreen() {
   const openEnroll = (studentId: number) => {
     setEnrollStudentId(studentId)
     setEnrollClassIds([])
+    setEnrollRemoveClassIds([])
     setEnrollOpen(true)
   }
 
   const requestRemoveStudent = (studentId: number) => {
+    setRemoveStudentNote("")
     setStudentToRemove(studentId)
   }
 
   const confirmRemoveStudent = async () => {
     if (studentToRemove == null) return
+    const note = removeStudentNote.trim()
+    if (note.length < 3) {
+      toast.error("Qeyd tələb olunur", { description: "Çıxarma səbəbini ən azı 3 simvol yazın." })
+      return
+    }
     setDeleteLoading(true)
     try {
-      await service.deleteStudent(studentToRemove)
+      await service.removeStudentFromCourse({ studentUserId: studentToRemove, note })
       toast.success("Tələbə kursdan çıxarıldı")
       setStudentToRemove(null)
+      setRemoveStudentNote("")
       await fetchStudents()
     } catch (e: unknown) {
       const msg =
@@ -193,29 +205,60 @@ export function StudentsScreen() {
   }
 
   const handleEnroll = async () => {
-    if (enrollStudentId == null || enrollClassIds.length === 0) return
+    if (enrollStudentId == null) return
+    const adding = enrollClassIds.length > 0
+    const removing = enrollRemoveClassIds.length > 0
+    if (!adding && !removing) return
+
+    if (adding) {
+      const feeNum = Number.parseFloat(enrollMonthlyFee)
+      if (Number.isNaN(feeNum) || feeNum < 0) {
+        toast.error("Aylıq ödəniş düzgün deyil", { description: "Yeni siniflər üçün ödənişi yoxlayın." })
+        return
+      }
+    }
+
     setEnrollSubmitting(true)
     try {
-      await service.enrollStudentToClasses({
-        studentUserId: enrollStudentId,
-        classes: enrollClassIds.map((id) => ({
-          classId: id,
-          monthlyFee: parseFloat(enrollMonthlyFee),
-          startMonth: enrollStartMonth,
-        })),
-      })
+      if (adding) {
+        await service.enrollStudentToClasses({
+          studentUserId: enrollStudentId,
+          classes: enrollClassIds.map((id) => ({
+            classId: id,
+            monthlyFee: Number.parseFloat(enrollMonthlyFee),
+            startMonth: enrollStartMonth,
+          })),
+        })
+      }
+      if (removing) {
+        await service.unenrollStudentFromClasses({
+          studentUserId: enrollStudentId,
+          classIds: enrollRemoveClassIds,
+        })
+      }
       await fetchStudents()
       const st = students.find((s) => s.id === enrollStudentId)
-      toast.success("Tələbə qeydiyyata alındı", {
-        description: `${st?.fullName ?? st?.name ?? ""} ${enrollClassIds.length} sinif${enrollClassIds.length > 1 ? "ə" : ""} qeydiyyata alındı.`,
-      })
+      const name = st?.fullName ?? st?.name ?? ""
+      if (adding && removing) {
+        toast.success("Qeydiyyat yeniləndi", {
+          description: `${name}: ${enrollClassIds.length} sinifə qeydiyyat, ${enrollRemoveClassIds.length} sinifdən çıxış.`,
+        })
+      } else if (adding) {
+        toast.success("Tələbə qeydiyyata alındı", {
+          description: `${name} ${enrollClassIds.length} sinif${enrollClassIds.length > 1 ? "ə" : ""} qeydiyyata alındı.`,
+        })
+      } else {
+        toast.success("Sinifdən çıxış qeydə alındı", {
+          description: `${name} ${enrollRemoveClassIds.length} sinifdən çıxarıldı.`,
+        })
+      }
       setEnrollOpen(false)
     } catch (e: unknown) {
       const msg =
         e && typeof e === "object" && "response" in e
           ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined
-      toast.error("Qeydiyyat alınmadı", { description: msg || "Xahiş edirik yenidən cəhd edin." })
+      toast.error("Əməliyyat alınmadı", { description: msg || "Xahiş edirik yenidən cəhd edin." })
     } finally {
       setEnrollSubmitting(false)
     }
@@ -328,6 +371,8 @@ export function StudentsScreen() {
         apiClasses={apiClasses}
         enrollClassIds={enrollClassIds}
         setEnrollClassIds={setEnrollClassIds}
+        enrollRemoveClassIds={enrollRemoveClassIds}
+        setEnrollRemoveClassIds={setEnrollRemoveClassIds}
         enrollMonthlyFee={enrollMonthlyFee}
         setEnrollMonthlyFee={setEnrollMonthlyFee}
         enrollStartMonth={enrollStartMonth}
@@ -335,7 +380,15 @@ export function StudentsScreen() {
         onConfirm={handleEnroll}
         isSubmitting={enrollSubmitting}
       />
-      <AlertDialog open={studentToRemove != null} onOpenChange={(open) => !open && setStudentToRemove(null)}>
+      <AlertDialog
+        open={studentToRemove != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStudentToRemove(null)
+            setRemoveStudentNote("")
+          }
+        }}
+      >
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Tələbəni kursdan çıxarmaq?</AlertDialogTitle>
@@ -344,9 +397,27 @@ export function StudentsScreen() {
               saxlanıla bilər.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="flex flex-col gap-2 py-1">
+            <Label htmlFor="remove-student-note">Çıxarma səbəbi</Label>
+            <Textarea
+              id="remove-student-note"
+              placeholder="Məs: ödəniş gecikməsi, köç və s."
+              value={removeStudentNote}
+              onChange={(e) => setRemoveStudentNote(e.target.value)}
+              disabled={deleteLoading}
+              rows={4}
+              className="resize-y min-h-[96px]"
+            />
+            <p className="text-xs text-muted-foreground">Ən azı 3 simvol. Bu qeyd «Kursdan çıxanlar» siyahısında saxlanılır.</p>
+          </div>
           <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <AlertDialogCancel disabled={deleteLoading}>Ləğv et</AlertDialogCancel>
-            <Button type="button" variant="destructive" disabled={deleteLoading} onClick={() => void confirmRemoveStudent()}>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteLoading || removeStudentNote.trim().length < 3}
+              onClick={() => void confirmRemoveStudent()}
+            >
               {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bəli, çıxar"}
             </Button>
           </AlertDialogFooter>

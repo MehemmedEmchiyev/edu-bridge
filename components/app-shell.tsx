@@ -26,6 +26,7 @@ import {
   Sun,
   Tags,
   UserCheck,
+  UserMinus,
   Users,
   X
 } from "lucide-react"
@@ -33,13 +34,14 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-const navItems = [
+const navItems: { id: string; label: string; icon: typeof LayoutDashboard; path?: string }[] = [
   { id: "dashboard", label: "Statistika", icon: LayoutDashboard },
   { id: "specializations", label: "İxtisaslar", icon: Tags },
   { id: "teachers", label: "Müəllimlər", icon: UserCheck },
   { id: "classes", label: "Siniflər", icon: BookOpen },
-  { id: "attendance", label: "Davranış", icon: CalendarCheck },
+  { id: "attendance", label: "Davamiyyət", icon: CalendarCheck },
   { id: "students", label: "Tələbələr", icon: Users },
+  { id: "students-removed", label: "Kursdan çıxanlar", icon: UserMinus, path: "/students/removed" },
   { id: "billing", label: "Faktura", icon: Receipt },
 ]
 
@@ -106,14 +108,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 px-4 py-2">
           <ul className="flex flex-col gap-1.5">
-            {navItems.map(({ id, label, icon: Icon }) => (
+            {navItems.map(({ id, label, icon: Icon, path }) => {
+              const href = path ?? `/${id}`
+              const isActive = path
+                ? pathname === path || pathname?.startsWith(`${path}/`)
+                : currentScreen === id
+              return (
               <li key={id}>
                 <Link
-                  href={`/${id}`}
+                  href={href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     `flex ${collapse ? "w-max" : "w-full gap-3"} items-center  rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200`,
-                    currentScreen === id
+                    isActive
                       ? "bg-gradient-to-r from-sidebar-primary/15 to-sidebar-primary/5 text-sidebar-primary border border-sidebar-primary/20 shadow-sm"
                       : "text-sidebar-foreground/65 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
                   )}
@@ -122,7 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <span className={`${collapse ? "opacity-0 w-0" : "opacity-100 w-auto"} overflow-hidden transition-all duration-300`}>{label}</span>
                 </Link>
               </li>
-            ))}
+            )})}
           </ul>
         </nav>
 
