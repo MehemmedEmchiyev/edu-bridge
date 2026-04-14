@@ -45,8 +45,6 @@ function statusBadge(status: Invoice["status"]) {
       return <Badge className="bg-warning/10 text-warning-foreground border-warning/20" variant="outline">Ödənilməmiş</Badge>
     case "overdue":
       return <Badge variant="destructive">Gecikmiş</Badge>
-    case "cancelled":
-      return <Badge variant="secondary">Ləğv edilmiş</Badge>
   }
 }
 
@@ -160,9 +158,8 @@ export function BillingInvoiceTable({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="paid">Ödənilmiş</SelectItem>
-                        {/* <SelectItem value="unpaid">Ödənilməmiş</SelectItem> */}
+                        <SelectItem value="unpaid">Ödənilməmiş</SelectItem>
                         <SelectItem value="overdue">Gecikmiş</SelectItem>
-                        <SelectItem value="cancelled">Ləğv</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

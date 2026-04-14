@@ -138,6 +138,11 @@ const getStudentCourseRemovals = async () => {
   const res = await axios.get<StudentCourseRemovalRow[]>(`${apiBaseUrl}/admin/students/course-removals`)
   return res
 }
+
+const restoreStudentToCourse = async (params: { studentUserId: number }) => {
+  const res = await axios.post(`${apiBaseUrl}/admin/students/restore-to-course`, params)
+  return res
+}
 const enrollStudentToClasses = async (params: {
   studentUserId: number
   classes: { classId: number; monthlyFee: number; startMonth: string }[]
@@ -283,6 +288,7 @@ const service = {
   deleteStudent,
   removeStudentFromCourse,
   getStudentCourseRemovals,
+  restoreStudentToCourse,
   enrollStudentToClasses,
   unenrollStudentFromClasses,
   getStudentInvoices,

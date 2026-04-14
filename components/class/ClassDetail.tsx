@@ -35,8 +35,8 @@ const ClassDetail = ({ detailClass, setDetailClass }: ClassDetailProps) => {
   const first = schedules[0]
 
   return (
-    <Dialog open={!!detailClass} onOpenChange={(open) => !open && setDetailClass(null)}>
-      <DialogContent className="max-w-2xl rounded-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)] sm:w-full min-w-0">
+    <Dialog  open={!!detailClass} onOpenChange={(open) => !open && setDetailClass(null)}>
+      <DialogContent className="max-w-6xl rounded-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-[95vw] min-w-0">
         {detailClass && (
           <>
             <DialogHeader className="min-w-0">

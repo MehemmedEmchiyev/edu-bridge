@@ -2,7 +2,7 @@ import type { UiInvoice } from "@/lib/invoice-normalize"
 
 export type MonthFinancials = {
   monthKey: string
-  /** Ləğv edilməyən fakturaların cəmi */
+  /** Fakturaların cəmi */
   expectedTotal: number
   /** Ödənilmiş fakturaların cəmi */
   collectedTotal: number
@@ -64,7 +64,6 @@ export function buildDashboardSnapshot(
   const unpaidCountByStudent = new Map<number, number>()
 
   for (const inv of inMonth) {
-    if (inv.status === "cancelled") continue
     expectedTotal += inv.amount
     if (inv.status === "paid") {
       collectedTotal += inv.amount
@@ -97,7 +96,7 @@ export function buildDashboardSnapshot(
   let allTimeOverdueAmount = 0
   let overdueInvoiceCount = 0
   for (const inv of invoices) {
-    if (inv.status === "cancelled" || inv.status === "paid") continue
+    if (inv.status === "paid") continue
     allTimeOutstanding += inv.amount
     if (inv.status === "overdue") {
       allTimeOverdueAmount += inv.amount
@@ -117,7 +116,7 @@ export function buildDashboardSnapshot(
       expectedTotal,
       collectedTotal,
       remainingTotal,
-      invoiceCount: inMonth.filter((i) => i.status !== "cancelled").length,
+      invoiceCount: inMonth.length,
       paidCount,
       unpaidCount,
       collectionRatePercent,

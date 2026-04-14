@@ -34,7 +34,11 @@ export function LoginScreen() {
       localStorage.setItem('user', JSON.stringify(res.data.user))
       router.push("/dashboard")
     } catch (error) {
-      toast.error("İstifadəçi adı və ya şifrə yanlışdır !")
+      const message =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined
+      toast.error(typeof message === "string" ? message : "İstifadəçi adı və ya şifrə yanlışdır !")
     }
     finally {
       setLoading(false)

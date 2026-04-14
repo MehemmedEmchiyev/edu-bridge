@@ -157,7 +157,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...s,
       invoices: s.invoices.map((inv) => {
         if (inv.studentId !== studentId) return inv
-        if (inv.status === "cancelled") return inv
         if (inv.dueDate >= startDate && inv.dueDate <= endDate) {
           return { ...inv, status: "paid" as const }
         }

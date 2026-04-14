@@ -50,7 +50,7 @@ export interface Invoice {
   id: string
   studentId: string
   amount: number
-  status: "paid" | "unpaid" | "overdue" | "cancelled"
+  status: "paid" | "unpaid" | "overdue"
   dueDate: string
   createdAt: string
   description: string
@@ -109,7 +109,7 @@ export const initialStudents: Student[] = studentNames.map((name, i) => {
   }
 })
 
-const invoiceStatuses: Invoice["status"][] = ["paid", "unpaid", "overdue", "paid", "paid", "unpaid", "overdue", "paid", "cancelled", "paid"]
+const invoiceStatuses: Invoice["status"][] = ["paid", "unpaid", "overdue", "paid", "paid", "unpaid", "overdue", "paid", "unpaid", "paid"]
 
 export const initialInvoices: Invoice[] = initialStudents.flatMap((student, si) => {
   return Array.from({ length: 3 }, (_, ii) => {

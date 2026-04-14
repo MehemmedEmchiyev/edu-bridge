@@ -5,7 +5,7 @@ export type UiInvoice = {
   /** Sinif ID — seçilmiş sinifə görə süzgəc üçün */
   classId?: number
   amount: number
-  status: "paid" | "unpaid" | "overdue" | "cancelled"
+  status: "paid" | "unpaid" | "overdue"
   dueDate: string
   createdAt: string
   description: string
@@ -34,16 +34,10 @@ export function normalizeInvoiceFromApi(inv: Record<string, unknown>): UiInvoice
   let ui: UiInvoice["status"] = "unpaid"
   if (st === "PAID") {
     ui = "paid"
-  } else if (st === "WAIVED") {
-    ui = "cancelled"
+  } else if (st === "OVERDUE") {
+    ui = "overdue"
   } else {
-    // UNPAID və s. — tarix keçmişdirsə UI-da gecikmiş
-    const due = new Date(dueDate + "T12:00:00")
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    due.setHours(0, 0, 0, 0)
-    if (due < today) ui = "overdue"
-    else ui = "unpaid"
+    ui = "unpaid"
   }
 
   const classIdRaw = inv.class_id ?? inv.classId
@@ -64,8 +58,7 @@ export function uiInvoiceStatusToApi(status: string): string {
   const map: Record<string, string> = {
     paid: "PAID",
     unpaid: "UNPAID",
-    overdue: "UNPAID",
-    cancelled: "WAIVED",
+    overdue: "OVERDUE",
   }
   return map[status] ?? status.toUpperCase()
 }

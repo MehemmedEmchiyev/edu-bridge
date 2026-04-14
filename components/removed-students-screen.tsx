@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, UserMinus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, RotateCcw, UserMinus } from "lucide-react"
 
 function formatRemovalDate(iso: string | undefined) {
   if (!iso?.trim()) return "—"
@@ -31,12 +32,27 @@ function formatRemovalDate(iso: string | undefined) {
 export function RemovedStudentsScreen() {
   const [rows, setRows] = useState<StudentCourseRemovalRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [restoringId, setRestoringId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await service.getStudentCourseRemovals()
-      setRows(res.data ?? [])
+      const [removalsRes, studentsRes] = await Promise.all([
+        service.getStudentCourseRemovals(),
+        service.getStudents(),
+      ])
+      const activeStudentIds = new Set<number>(
+        (Array.isArray(studentsRes.data) ? studentsRes.data : [])
+          .map((s: unknown) =>
+            s && typeof s === "object" && "id" in s ? Number((s as { id?: unknown }).id) : NaN,
+          )
+          .filter((id) => Number.isFinite(id)),
+      )
+
+      const filtered = (removalsRes.data ?? []).filter(
+        (r) => !(r.studentUserId != null && activeStudentIds.has(r.studentUserId)),
+      )
+      setRows(filtered)
     } catch (e: unknown) {
       const msg =
         e && typeof e === "object" && "response" in e
@@ -52,6 +68,31 @@ export function RemovedStudentsScreen() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const handleRestore = useCallback(async (row: StudentCourseRemovalRow) => {
+    if (restoringId !== null) return
+    if (row.studentUserId == null) {
+      toast.error("Tələbə ID tapılmadı")
+      return
+    }
+
+    setRestoringId(row.id)
+    try {
+      await service.restoreStudentToCourse({ studentUserId: row.studentUserId })
+      toast.success("Tələbə kursa geri qaytarıldı")
+      await load()
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === "object" && "response" in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined
+      toast.error("Geri qaytarmaq mümkün olmadı", {
+        description: typeof msg === "string" ? msg : "Yenidən cəhd edin.",
+      })
+    } finally {
+      setRestoringId(null)
+    }
+  }, [load, restoringId])
 
   return (
     <div className="flex flex-col gap-6 min-w-0">
@@ -86,6 +127,7 @@ export function RemovedStudentsScreen() {
                     <TableHead>Tələbə</TableHead>
                     <TableHead className="min-w-[200px]">Qeyd (səbəb)</TableHead>
                     <TableHead className="hidden lg:table-cell">Çıxaran</TableHead>
+                      <TableHead className="text-right">Əməliyyat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -101,6 +143,26 @@ export function RemovedStudentsScreen() {
                       <TableCell className="text-sm align-top max-w-md whitespace-pre-wrap">{r.note}</TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {r.removedByAdminName?.trim() || "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleRestore(r)}
+                          disabled={restoringId !== null || r.studentUserId == null}
+                        >
+                          {restoringId === r.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                              Qaytarılır...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-4 w-4 mr-1.5" />
+                              Kursa qaytar
+                            </>
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

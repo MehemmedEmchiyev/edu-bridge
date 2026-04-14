@@ -170,7 +170,7 @@ export function BillingScreen() {
         case "amount":
           return b.amount - a.amount
         case "status": {
-          const order: Record<string, number> = { overdue: 0, unpaid: 1, paid: 2, cancelled: 3 }
+          const order: Record<string, number> = { overdue: 0, unpaid: 1, paid: 2 }
           return (order[a.status] ?? 9) - (order[b.status] ?? 9)
         }
         case "date":

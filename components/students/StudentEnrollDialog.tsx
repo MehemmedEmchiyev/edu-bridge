@@ -152,7 +152,7 @@ export function StudentEnrollDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Ləğv et
           </Button>
-          {!canSubmit && <Button onClick={onConfirm} disabled={!canSubmit || isSubmitting}>
+          {canSubmit && <Button onClick={onConfirm} disabled={!canSubmit || isSubmitting}>
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -6,10 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar } from "@/components/ui/calendar"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { az } from "date-fns/locale"
+import { CalendarDays, CheckCircle2, Clock3, UserRoundX, Users } from "lucide-react"
 
 type SimpleClass = { id: number; name: string; number?: string | null }
 
@@ -19,6 +21,14 @@ const statusToSymbol: Record<AttendanceStatus, { label: string; className: strin
   late: { label: "g", className: "text-amber-600", labelLong: "Gecikmə" },
   excused: { label: "ø", className: "text-sky-600", labelLong: "Üzrlü" },
   unknown: { label: "—", className: "text-muted-foreground", labelLong: "Dərs yox / qeyd yoxdur" },
+}
+
+const statusBadgeClass: Record<AttendanceStatus, string> = {
+  present: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  absent: "bg-rose-500/10 text-rose-700 border-rose-500/20",
+  late: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  excused: "bg-sky-500/10 text-sky-700 border-sky-500/20",
+  unknown: "bg-muted text-muted-foreground border-border",
 }
 
 function toYyyyMmDd(iso: string) {
@@ -175,11 +185,100 @@ export function AttendanceScreen() {
   }, [days, sessionIdsByDate, rows])
 
   const sessionOnSelected = selectedDayKey ? (sessionIdsByDate[selectedDayKey]?.length ?? 0) > 0 : false
+  const selectedDayStats = useMemo(() => {
+    const stats: Record<AttendanceStatus, number> = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+      unknown: 0,
+    }
+    for (const row of selectedDayRows) {
+      stats[row.status] += 1
+    }
+    return stats
+  }, [selectedDayRows])
+
+  const overallStats = useMemo(() => {
+    const totalStudents = rows?.length ?? 0
+    const daysWithSession = days.filter((d) => (sessionIdsByDate[d]?.length ?? 0) > 0).length
+    const avgAttendancePercent =
+      totalStudents === 0 || daysWithSession === 0
+        ? 0
+        : Math.round(
+            (rows!.reduce((acc, r) => {
+              const positive = r.cells.filter(
+                (c) =>
+                  (sessionIdsByDate[c.date]?.length ?? 0) > 0 &&
+                  (c.status === "present" || c.status === "late" || c.status === "excused"),
+              ).length
+              return acc + positive / daysWithSession
+            }, 0) /
+              totalStudents) *
+              100,
+          )
+    return { totalStudents, daysWithSession, avgAttendancePercent }
+  }, [rows, days, sessionIdsByDate])
+
+  const monthlyMatrixRows = useMemo(() => {
+    return (rows ?? []).map((row) => {
+      const markByDate = new Map(
+        row.cells.map((c) => [c.date, c.status === "present" ? "+" : "-"]),
+      )
+      const marks = days.map((day) => markByDate.get(day) ?? "-")
+      return {
+        studentId: row.studentId,
+        fullName: row.fullName,
+        marks,
+      }
+    })
+  }, [rows, days])
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="rounded-2xl border-border/60">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Tələbə sayı</p>
+              <p className="text-2xl font-semibold">{overallStats.totalStudents}</p>
+            </div>
+            <Users className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/60">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Dərs günləri</p>
+              <p className="text-2xl font-semibold">{overallStats.daysWithSession}</p>
+            </div>
+            <CalendarDays className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/60">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Orta iştirak</p>
+              <p className="text-2xl font-semibold">%{overallStats.avgAttendancePercent}</p>
+            </div>
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/60">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Seçilmiş gün</p>
+              <p className="text-sm font-medium">
+                {selectedDate ? format(selectedDate, "d MMM yyyy", { locale: az }) : "—"}
+              </p>
+            </div>
+            <Clock3 className="h-5 w-5 text-amber-600" />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-end gap-4 flex-wrap">
-        <div className="min-w-[220px]">
+        <div className="min-w-[260px]">
           <label className="block text-xs text-muted-foreground mb-1">Sinif</label>
           <Select value={selectedClassId} onValueChange={setSelectedClassId} disabled={!classes}>
             <SelectTrigger className="h-10">
@@ -212,10 +311,13 @@ export function AttendanceScreen() {
           <CardContent className="p-8 text-sm text-muted-foreground">Məlumat yoxdur</CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr] items-start">
-          <Card className="overflow-hidden w-full max-w-md">
+        <div className="grid gap-6 xl:grid-cols-[420px_1fr] items-start">
+          <Card className="overflow-hidden w-full rounded-2xl border-border/60">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Ay təqvimi</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                Ay təqvimi
+              </CardTitle>
               <CardDescription>
                 Dərs olan günlər işarəlidir; yaşıl — yüksək iştirak, narıncı — aşağı.
               </CardDescription>
@@ -244,7 +346,7 @@ export function AttendanceScreen() {
             </CardContent>
           </Card>
 
-          <Card className="min-w-0">
+          <Card className="min-w-0 rounded-2xl border-border/60">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">
                 {selectedDate
@@ -258,6 +360,25 @@ export function AttendanceScreen() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+                <div className="rounded-xl border p-3 bg-emerald-500/5">
+                  <p className="text-xs text-muted-foreground">İştirak</p>
+                  <p className="text-lg font-semibold text-emerald-700">{selectedDayStats.present}</p>
+                </div>
+                <div className="rounded-xl border p-3 bg-amber-500/5">
+                  <p className="text-xs text-muted-foreground">Gecikmə</p>
+                  <p className="text-lg font-semibold text-amber-700">{selectedDayStats.late}</p>
+                </div>
+                <div className="rounded-xl border p-3 bg-rose-500/5">
+                  <p className="text-xs text-muted-foreground">Qayıb</p>
+                  <p className="text-lg font-semibold text-rose-700">{selectedDayStats.absent}</p>
+                </div>
+                <div className="rounded-xl border p-3 bg-sky-500/5">
+                  <p className="text-xs text-muted-foreground">Üzrlü</p>
+                  <p className="text-lg font-semibold text-sky-700">{selectedDayStats.excused}</p>
+                </div>
+              </div>
+
               <div className="rounded-xl border overflow-hidden">
                 <div className="max-h-[min(60vh,520px)] overflow-y-auto">
                   <table className="w-full text-sm border-collapse">
@@ -276,16 +397,19 @@ export function AttendanceScreen() {
                         return (
                           <tr key={r.studentId} className="odd:bg-accent/25">
                             <td className="px-3 py-2 border-b font-medium">{r.fullName}</td>
-                            <td
-                              className={cn(
-                                "px-3 py-2 border-b text-center text-base font-semibold",
-                                sym.className,
-                              )}
-                            >
-                              {sym.label}
+                            <td className="px-3 py-2 border-b text-center">
+                              <Badge
+                                variant="outline"
+                                className={cn("text-xs", statusBadgeClass[r.status])}
+                              >
+                                {sym.labelLong}
+                              </Badge>
                             </td>
                             <td className={cn("px-3 py-2 border-b hidden sm:table-cell text-muted-foreground", sym.className)}>
-                              {sym.labelLong}
+                              <span className="inline-flex items-center gap-1.5">
+                                {r.status === "absent" ? <UserRoundX className="h-3.5 w-3.5" /> : null}
+                                {sym.label}
+                              </span>
                             </td>
                           </tr>
                         )
@@ -314,6 +438,65 @@ export function AttendanceScreen() {
           </Card>
         </div>
       )}
+
+      {(rows?.length ?? 0) > 0 ? (
+        <Card className="rounded-2xl border-border/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Ümumi baxış cədvəli</CardTitle>
+            <CardDescription>
+              Sinifdəki bütün tələbələr və ayın bütün günləri üzrə davamiyyət (`+` gəlib, `-` gəlməyib).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl border overflow-hidden">
+              <div className="max-h-[520px] overflow-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-[1]">
+                    <tr>
+                      <th className="text-left font-medium px-3 py-2 border-b sticky left-0 bg-muted/95 min-w-[220px]">
+                        Tələbə
+                      </th>
+                      {days.map((day) => (
+                        <th key={day} className="text-center font-medium px-2 py-2 border-b min-w-10">
+                          {day.slice(-2)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyMatrixRows.map((r) => (
+                      <tr key={r.studentId} className="odd:bg-accent/25">
+                        <td className="px-3 py-2 border-b font-medium sticky left-0 bg-background min-w-[220px]">
+                          {r.fullName}
+                        </td>
+                        {r.marks.map((mark, idx) => (
+                          <td
+                            key={`${r.studentId}-${days[idx]}`}
+                            className={cn(
+                              "px-2 py-2 border-b text-center font-semibold",
+                              mark === "+" ? "text-emerald-700" : "text-rose-700",
+                            )}
+                          >
+                            {mark}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground flex items-center gap-4">
+              <span className="inline-flex items-center gap-1">
+                <span className="text-emerald-700 font-semibold">+</span> Gəlib
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="text-rose-700 font-semibold">-</span> Gəlməyib
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }
